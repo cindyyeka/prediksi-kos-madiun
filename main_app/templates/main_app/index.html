@@ -16,7 +16,7 @@
             --border: #e2e8e6;
         }
 
-        * {
+        *, *::before, *::after {
             box-sizing: border-box;
         }
 
@@ -101,9 +101,48 @@
         }
 
         .card h2 {
-            margin: 0 0 14px;
+            margin: 0 0 12px;
             font-size: 17px;
             color: var(--text-main);
+        }
+
+        /* Tombol Preset Cepat */
+        .preset-box {
+            margin-bottom: 14px;
+        }
+
+        .preset-label {
+            display: block;
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-bottom: 7px;
+            font-weight: 600;
+        }
+
+        .preset-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 7px;
+        }
+
+        .preset-btn {
+            width: auto;
+            margin-top: 0;
+            padding: 5px 10px;
+            font-size: 12px;
+            font-weight: 600;
+            background-color: var(--accent-soft);
+            color: var(--accent);
+            border: 1px solid #c3dcd5;
+            border-radius: 999px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .preset-btn:hover {
+            background-color: var(--accent);
+            color: #ffffff;
+            border-color: var(--accent);
         }
 
         .form-group {
@@ -135,22 +174,52 @@
             box-shadow: 0 0 0 3px rgba(63, 110, 101, 0.14);
         }
 
-        button {
-            width: 100%;
-            margin-top: 6px;
-            padding: 11px 18px;
+        .action-row {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .submit-btn {
+            flex: 1;
+            width: auto;
+            margin-top: 0;
+            padding: 11px 16px;
             background-color: var(--accent);
             color: #ffffff;
             border: none;
             border-radius: 8px;
-            font-size: 14.5px;
+            font-size: 14px;
             font-weight: 600;
             cursor: pointer;
-            transition: background-color 0.2s ease;
+            transition: background-color 0.2s ease, opacity 0.2s ease;
         }
 
-        button:hover {
+        .submit-btn:hover:not(:disabled) {
             background-color: var(--accent-hover);
+        }
+
+        .submit-btn:disabled {
+            opacity: 0.75;
+            cursor: wait;
+        }
+
+        .reset-btn {
+            width: auto;
+            margin-top: 0;
+            padding: 11px 14px;
+            background-color: #f1f5f4;
+            color: var(--text-main);
+            border: 1px solid #cbd5d2;
+            border-radius: 8px;
+            font-size: 13.5px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.15s ease;
+        }
+
+        .reset-btn:hover {
+            background-color: #e3eae8;
         }
 
         .error {
@@ -209,6 +278,18 @@
             color: var(--text-muted);
         }
 
+        .budget-box {
+            margin-top: 12px;
+            padding-top: 10px;
+            border-top: 1px dashed #b6d1ca;
+            font-size: 13px;
+            color: var(--text-main);
+        }
+
+        .budget-box p {
+            margin: 4px 0;
+        }
+
         .chart-img {
             width: 100%;
             height: auto;
@@ -256,9 +337,10 @@
 <body>
     <div class="container">
         <div class="header-box">
-    <h1>CekKos Madiun</h1>
-    <p>Estimasi harga kos sekitar kampus Madiun.</p>
+            <h1>CekKos Madiun</h1>
+            <p>Estimasi harga kos sekitar kampus Madiun.</p>
         </div>
+
         <!-- 3 Kotak Statistik Ringkas -->
         <div class="stats-grid">
             <div class="stat-card">
@@ -267,11 +349,11 @@
             </div>
             <div class="stat-card">
                 <div class="stat-label">Rata-Rata Harga</div>
-                <div class="stat-value">{{ statistik.rata_rata_harga }}</div>
+                <div class="stat-value unit-normalize">{{ statistik.rata_rata_harga }}</div>
             </div>
             <div class="stat-card">
                 <div class="stat-label">Rentang Harga (Min – Max)</div>
-                <div class="stat-value">{{ statistik.rentang_harga }}</div>
+                <div class="stat-value unit-normalize">{{ statistik.rentang_harga }}</div>
             </div>
         </div>
 
@@ -281,7 +363,17 @@
             <div class="stack-col">
                 <div class="card">
                     <h2>Input Karakteristik Kos</h2>
-                    <form method="post">
+
+                    <div class="preset-box">
+                        <span class="preset-label">Isi cepat skenario:</span>
+                        <div class="preset-list">
+                            <button type="button" class="preset-btn" onclick="applyPreset(1.5, 4, 'ya')">Dekat Kampus + AC</button>
+                            <button type="button" class="preset-btn" onclick="applyPreset(2, 3, 'tidak')">Hemat Tanpa AC</button>
+                            <button type="button" class="preset-btn" onclick="applyPreset(6, 4.5, 'ya')">Jauh + Rating Tinggi</button>
+                        </div>
+                    </div>
+
+                    <form method="post" id="kos-form">
                         {% csrf_token %}
                         {% for field in form %}
                             <div class="form-group">
@@ -292,7 +384,10 @@
                                 {% endfor %}
                             </div>
                         {% endfor %}
-                        <button type="submit">Cek Estimasi Harga</button>
+                        <div class="action-row">
+                            <button type="submit" class="submit-btn" id="submit-btn">Cek Estimasi Harga</button>
+                            <button type="button" class="reset-btn" id="reset-btn" onclick="resetKosForm()">Reset</button>
+                        </div>
                     </form>
                 </div>
 
@@ -310,6 +405,11 @@
                         <p class="hasil-detail">
                             Input: jarak <b>{{ info_prediksi.jarak }} km</b>, rating <b>{{ info_prediksi.rating }}</b>, dan fasilitas <b>{{ info_prediksi.ac_label }}</b>.
                         </p>
+                        <div class="budget-box" id="budget-helper" data-hasil="{{ hasil }}" data-rata="{{ statistik.rata_rata_harga }}">
+                            <p><strong>Rata-rata data kos:</strong> <span class="unit-normalize">{{ statistik.rata_rata_harga }}</span></p>
+                            <p id="selisih-rata-rata"></p>
+                            <p id="estimasi-jangka-panjang"></p>
+                        </div>
                     </div>
                 {% endif %}
             </div>
@@ -338,5 +438,130 @@
             </div>
         </div>
     </div>
+
+    <script>
+        function parseRibuNumber(text) {
+            if (!text) return NaN;
+            const cleaned = String(text)
+                .replace(/rp/gi, "")
+                .replace(/ribu/gi, "")
+                .replace(/(\d)k\b/gi, "$1")
+                .trim();
+
+            if (/^\d{1,3}([.,]\d{3})+$/.test(cleaned)) {
+                return parseFloat(cleaned.replace(/[.,]/g, ""));
+            }
+
+            return parseFloat(cleaned.replace(",", "."));
+        }
+
+        (function normalizeUnits() {
+            document.querySelectorAll(".unit-normalize").forEach((el) => {
+                el.textContent = el.textContent.replace(/(\d[\d.,]*)\s*k\b/gi, "$1 ribu");
+            });
+        })();
+
+        function applyPreset(jarak, rating, acChoice) {
+            const form = document.getElementById("kos-form");
+            if (!form) return;
+
+            const inputs = Array.from(form.querySelectorAll('input:not([type="hidden"])'));
+            const selects = Array.from(form.querySelectorAll("select"));
+
+            if (inputs[0]) {
+                inputs[0].value = jarak;
+                inputs[0].dispatchEvent(new Event("input", { bubbles: true }));
+            }
+            if (inputs[1]) {
+                inputs[1].value = rating;
+                inputs[1].dispatchEvent(new Event("input", { bubbles: true }));
+            }
+
+            if (selects[0]) {
+                const target = acChoice.toLowerCase();
+                const matched = Array.from(selects[0].options).find((opt) => {
+                    const val = (opt.value || "").toLowerCase();
+                    const txt = (opt.text || "").toLowerCase();
+                    if (target === "ya") {
+                        return val === "ya" || val === "1" || val === "true" || txt.includes("ya") || txt.includes("ada") || txt.includes("dengan");
+                    }
+                    return val === "tidak" || val === "0" || val === "false" || txt.includes("tidak") || txt.includes("tanpa");
+                });
+                if (matched) {
+                    selects[0].value = matched.value;
+                    selects[0].dispatchEvent(new Event("change", { bubbles: true }));
+                }
+            }
+        }
+
+        function resetKosForm() {
+            const form = document.getElementById("kos-form");
+            if (!form) return;
+
+            form.reset();
+            form.querySelectorAll('input:not([type="hidden"])').forEach((inp) => {
+                inp.value = "";
+                inp.dispatchEvent(new Event("input", { bubbles: true }));
+            });
+            form.querySelectorAll("select").forEach((sel) => {
+                if (sel.options.length > 0) {
+                    sel.selectedIndex = 0;
+                    sel.dispatchEvent(new Event("change", { bubbles: true }));
+                }
+            });
+        }
+
+        (function setupSubmitLoading() {
+            const form = document.getElementById("kos-form");
+            const btn = document.getElementById("submit-btn");
+            if (!form || !btn) return;
+
+            form.addEventListener("submit", function () {
+                btn.disabled = true;
+                btn.textContent = "Menghitung & menganalisis...";
+            });
+        })();
+
+        (function renderBudgetEstimate() {
+            const box = document.getElementById("budget-helper");
+            const selisihEl = document.getElementById("selisih-rata-rata");
+            const targetEl = document.getElementById("estimasi-jangka-panjang");
+            if (!box || !targetEl) return;
+
+            const hasilVal = parseRibuNumber(box.getAttribute("data-hasil"));
+            if (isNaN(hasilVal)) return;
+
+            const rataVal = parseRibuNumber(box.getAttribute("data-rata"));
+            if (selisihEl) {
+                if (!isNaN(rataVal)) {
+                    const diff = Math.round(hasilVal - rataVal);
+                    if (diff === 0) {
+                        selisihEl.innerHTML = "<strong>Perbandingan rata-rata:</strong> setara dengan rata-rata kos di data.";
+                    } else if (diff < 0) {
+                        selisihEl.innerHTML =
+                            "<strong>Perbandingan rata-rata:</strong> lebih hemat <b>Rp " +
+                            Math.abs(diff).toLocaleString("id-ID") +
+                            " ribu</b> / bulan dari rata-rata.";
+                    } else {
+                        selisihEl.innerHTML =
+                            "<strong>Perbandingan rata-rata:</strong> lebih tinggi <b>Rp " +
+                            diff.toLocaleString("id-ID") +
+                            " ribu</b> / bulan dari rata-rata.";
+                    }
+                } else {
+                    selisihEl.style.display = "none";
+                }
+            }
+
+            const sem = Math.round(hasilVal * 6);
+            const thn = Math.round(hasilVal * 12);
+            targetEl.innerHTML =
+                "<strong>Estimasi budget:</strong> sekitar <b>Rp " +
+                sem.toLocaleString("id-ID") +
+                " ribu</b> / semester (6 bln) atau <b>Rp " +
+                thn.toLocaleString("id-ID") +
+                " ribu</b> / tahun (12 bln).";
+        })();
+    </script>
 </body>
 </html>
