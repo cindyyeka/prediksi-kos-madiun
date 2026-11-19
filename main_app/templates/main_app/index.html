@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Prediksi Harga Kos Madiun</title>
+    <title>CekKos Madiun</title>
     <style>
         :root {
             --bg-page: #f4f6f9;
@@ -242,12 +242,6 @@
             line-height: 1.5;
         }
 
-        .catatan {
-            color: var(--text-muted);
-            font-size: 12.5px;
-            margin: 0;
-        }
-
         @media (max-width: 820px) {
             .stats-grid {
                 grid-template-columns: 1fr;
@@ -262,8 +256,8 @@
 <body>
     <div class="container">
         <div class="header-box">
-            <h1>Prediksi Harga Kos Madiun</h1>
-            <p>Estimasi harga sewa kos bulanan berdasarkan jarak ke kampus, rating, dan ketersediaan AC.</p>
+            <h1>CekKos Madiun</h1>
+            <p>Sistem Cerdas Estimasi Biaya Sewa Kos Mahasiswa Berdasarkan Jarak, Rating, dan Fasilitas AC.</p>
         </div>
 
         <!-- 3 Kotak Statistik Ringkas -->
@@ -299,7 +293,7 @@
                                 {% endfor %}
                             </div>
                         {% endfor %}
-                        <button type="submit">Prediksi Harga</button>
+                        <button type="submit">Cek Estimasi Harga</button>
                     </form>
                 </div>
 
@@ -321,7 +315,7 @@
                 {% endif %}
             </div>
 
-            <!-- Kolom Kanan: Grafik 1 + Penjelasan, Grafik 2 + Penjelasan, Ringkasan Model -->
+            <!-- Kolom Kanan: Grafik 1 + Penjelasan, Grafik 2 + Penjelasan -->
             <div class="stack-col">
                 <div class="card">
                     <img class="chart-img" src="data:image/png;base64,{{ grafik_scatter }}" alt="Grafik scatter harga kos vs jarak">
@@ -341,12 +335,6 @@
                             <p class="ai-text">{{ penjelasan_ai.ac }}</p>
                         </div>
                     {% endif %}
-                </div>
-
-                <div class="card">
-                    <p class="catatan">
-                        <b>Catatan Model:</b> Model regresi dimuat dari <code>ml_model/model.pkl</code> dan dihitung berdasarkan data pada <code>data/kos_madiun.csv</code>. Hasil prediksi bersifat perkiraan awal.
-                    </p>
                 </div>
             </div>
         </div>
