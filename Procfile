@@ -1,0 +1,1 @@
+web: gunicorn core_proyek.wsgi:application

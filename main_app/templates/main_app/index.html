@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prediksi Harga Kos Madiun</title>
+    <style>
+        :root {
+            --bg-page: #f4f6f9;
+            --bg-card: #ffffff;
+            --text-main: #1f2d2b;
+            --text-muted: #5c6f6b;
+            --accent: #3f6e65;
+            --accent-hover: #325952;
+            --accent-soft: #eaf3f0;
+            --border: #e2e8e6;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: "Segoe UI", Arial, sans-serif;
+            background-color: var(--bg-page);
+            color: var(--text-main);
+            margin: 0;
+            padding: 28px 18px 44px;
+            line-height: 1.5;
+        }
+
+        .container {
+            max-width: 1080px;
+            margin: 0 auto;
+        }
+
+        .header-box {
+            margin-bottom: 20px;
+        }
+
+        .header-box h1 {
+            margin: 0 0 6px;
+            font-size: 26px;
+            color: var(--text-main);
+        }
+
+        .header-box p {
+            margin: 0;
+            color: var(--text-muted);
+            font-size: 14.5px;
+        }
+
+        /* 3 Kotak Statistik Ringkas */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 14px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px 18px;
+            box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+        }
+
+        .stat-label {
+            font-size: 12.5px;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
+
+        .stat-value {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--accent);
+        }
+
+        /* Layout 2 Kolom Utama */
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 1.35fr;
+            gap: 20px;
+            align-items: start;
+        }
+
+        .stack-col {
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 20px;
+            box-shadow: 0 3px 10px rgba(15, 23, 42, 0.04);
+        }
+
+        .card h2 {
+            margin: 0 0 14px;
+            font-size: 17px;
+            color: var(--text-main);
+        }
+
+        .form-group {
+            margin-bottom: 13px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 600;
+            font-size: 13.5px;
+            color: var(--text-main);
+        }
+
+        input, select {
+            width: 100%;
+            padding: 9px 11px;
+            border: 1px solid #cbd5d2;
+            border-radius: 8px;
+            font-size: 14px;
+            background-color: #fafcfb;
+            color: var(--text-main);
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: var(--accent);
+            background-color: #ffffff;
+            box-shadow: 0 0 0 3px rgba(63, 110, 101, 0.14);
+        }
+
+        button {
+            width: 100%;
+            margin-top: 6px;
+            padding: 11px 18px;
+            background-color: var(--accent);
+            color: #ffffff;
+            border: none;
+            border-radius: 8px;
+            font-size: 14.5px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+
+        button:hover {
+            background-color: var(--accent-hover);
+        }
+
+        .error {
+            color: #b91c1c;
+            font-size: 12.5px;
+            margin-top: 4px;
+        }
+
+        /* Kartu Hasil Prediksi */
+        .hasil-card {
+            background-color: var(--accent-soft);
+            border: 1px solid #c3dcd5;
+            border-left: 5px solid var(--accent);
+        }
+
+        .hasil-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+
+        .hasil-harga {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .badge-murah {
+            background-color: #dcfce7;
+            color: #166534;
+        }
+
+        .badge-sedang {
+            background-color: #fef3c7;
+            color: #92400e;
+        }
+
+        .badge-mahal {
+            background-color: #fee2e2;
+            color: #991b1b;
+        }
+
+        .hasil-detail {
+            margin: 6px 0 0;
+            font-size: 13.5px;
+            color: var(--text-muted);
+        }
+
+        .chart-img {
+            width: 100%;
+            height: auto;
+            display: block;
+            border-radius: 8px;
+        }
+
+        /* Penjelasan Singkat AI di Bawah Tiap Grafik */
+        .ai-note {
+            margin-top: 12px;
+            padding: 10px 12px;
+            background-color: #f8fbfa;
+            border: 1px solid #dce7e4;
+            border-radius: 8px;
+        }
+
+        .ai-label {
+            display: inline-block;
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            margin-bottom: 4px;
+        }
+
+        .ai-text {
+            margin: 0;
+            font-size: 13px;
+            color: var(--text-main);
+            line-height: 1.5;
+        }
+
+        .catatan {
+            color: var(--text-muted);
+            font-size: 12.5px;
+            margin: 0;
+        }
+
+        @media (max-width: 820px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header-box">
+            <h1>Prediksi Harga Kos Madiun</h1>
+            <p>Estimasi harga sewa kos bulanan berdasarkan jarak ke kampus, rating, dan ketersediaan AC.</p>
+        </div>
+
+        <!-- 3 Kotak Statistik Ringkas -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">Total Data Kos</div>
+                <div class="stat-value">{{ statistik.total_data }} data</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Rata-Rata Harga</div>
+                <div class="stat-value">{{ statistik.rata_rata_harga }}</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Rentang Harga (Min – Max)</div>
+                <div class="stat-value">{{ statistik.rentang_harga }}</div>
+            </div>
+        </div>
+
+        <!-- 2 Kolom Utama -->
+        <div class="main-grid">
+            <!-- Kolom Kiri: Form Input + Kartu Hasil Prediksi -->
+            <div class="stack-col">
+                <div class="card">
+                    <h2>Input Karakteristik Kos</h2>
+                    <form method="post">
+                        {% csrf_token %}
+                        {% for field in form %}
+                            <div class="form-group">
+                                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                {{ field }}
+                                {% for error in field.errors %}
+                                    <div class="error">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        {% endfor %}
+                        <button type="submit">Prediksi Harga</button>
+                    </form>
+                </div>
+
+                {% if hasil and info_prediksi %}
+                    <div class="card hasil-card">
+                        <div class="hasil-top">
+                            <span style="font-size: 13px; font-weight: 600; color: var(--accent);">
+                                Hasil Perkiraan Harga
+                            </span>
+                            <span class="badge {{ info_prediksi.badge_class }}">
+                                {{ info_prediksi.kategori }}
+                            </span>
+                        </div>
+                        <div class="hasil-harga">Rp {{ hasil }} ribu <span style="font-size: 14px; font-weight: 500;">/ bulan</span></div>
+                        <p class="hasil-detail">
+                            Input: jarak <b>{{ info_prediksi.jarak }} km</b>, rating <b>{{ info_prediksi.rating }}</b>, dan fasilitas <b>{{ info_prediksi.ac_label }}</b>.
+                        </p>
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Kolom Kanan: Grafik 1 + Penjelasan, Grafik 2 + Penjelasan, Ringkasan Model -->
+            <div class="stack-col">
+                <div class="card">
+                    <img class="chart-img" src="data:image/png;base64,{{ grafik_scatter }}" alt="Grafik scatter harga kos vs jarak">
+                    {% if penjelasan_ai.scatter %}
+                        <div class="ai-note">
+                            <span class="ai-label">Penjelasan AI</span>
+                            <p class="ai-text">{{ penjelasan_ai.scatter }}</p>
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="card">
+                    <img class="chart-img" src="data:image/png;base64,{{ grafik_ac }}" alt="Grafik rata-rata harga kos berdasarkan AC">
+                    {% if penjelasan_ai.ac %}
+                        <div class="ai-note">
+                            <span class="ai-label">Penjelasan AI</span>
+                            <p class="ai-text">{{ penjelasan_ai.ac }}</p>
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="card">
+                    <p class="catatan">
+                        <b>Catatan Model:</b> Model regresi dimuat dari <code>ml_model/model.pkl</code> dan dihitung berdasarkan data pada <code>data/kos_madiun.csv</code>. Hasil prediksi bersifat perkiraan awal.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
