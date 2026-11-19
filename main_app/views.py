@@ -8,6 +8,7 @@ import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+from matplotlib.ticker import FuncFormatter
 import pandas as pd
 from django.shortcuts import render
 from groq import Groq
@@ -18,6 +19,20 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 model = joblib.load(BASE_DIR / "ml_model" / "model.pkl")
 df = pd.read_csv(BASE_DIR / "data" / "kos_madiun.csv")
+
+
+def _ke_rupiah_penuh(nilai_ribu):
+    return int(round(float(nilai_ribu) * 1000))
+
+
+def _format_rp(nilai_ribu):
+    rupiah = _ke_rupiah_penuh(nilai_ribu)
+    return f"Rp {rupiah:,}".replace(",", ".")
+
+
+def _format_tick_rp(val, pos):
+    rupiah = _ke_rupiah_penuh(val)
+    return f"{rupiah:,}".replace(",", ".")
 
 
 def _fig_to_base64(fig):
@@ -69,7 +84,8 @@ def buat_grafik_scatter(jarak=None, rating=None, ac_num=None, prediksi=None):
 
     ax.set_title("Harga Kos vs Jarak ke Kampus", fontsize=11, fontweight="bold", pad=10)
     ax.set_xlabel("Jarak (km)", fontsize=9.5)
-    ax.set_ylabel("Harga (ribu Rp)", fontsize=9.5)
+    ax.set_ylabel("Harga (Rp)", fontsize=9.5)
+    ax.yaxis.set_major_formatter(FuncFormatter(_format_tick_rp))
     ax.grid(True, linestyle=":", alpha=0.45)
     ax.legend(fontsize=8.5, frameon=True)
 
@@ -98,7 +114,7 @@ def buat_grafik_ac(ac_num=None):
         ax.text(
             bar.get_x() + bar.get_width() / 2,
             tinggi + (max(nilai_bar) * 0.02 if max(nilai_bar) > 0 else 5),
-            f"Rp {tinggi:,.0f}k",
+            _format_rp(tinggi),
             ha="center",
             va="bottom",
             fontsize=8.5,
@@ -107,7 +123,8 @@ def buat_grafik_ac(ac_num=None):
         )
 
     ax.set_title("Rata-Rata Harga Kos Berdasarkan Fasilitas AC", fontsize=11, fontweight="bold", pad=10)
-    ax.set_ylabel("Rata-rata harga (ribu Rp)", fontsize=9.5)
+    ax.set_ylabel("Rata-rata harga (Rp)", fontsize=9.5)
+    ax.yaxis.set_major_formatter(FuncFormatter(_format_tick_rp))
     ax.set_ylim(0, max(nilai_bar) * 1.18 if max(nilai_bar) > 0 else 100)
     ax.grid(axis="y", linestyle=":", alpha=0.45)
 
@@ -116,14 +133,14 @@ def buat_grafik_ac(ac_num=None):
 
 def hitung_statistik_dataset():
     total_data = len(df)
-    rata_rata_harga = round(float(df["harga"].mean()))
-    harga_min = round(float(df["harga"].min()))
-    harga_max = round(float(df["harga"].max()))
+    rata_rata_harga = float(df["harga"].mean())
+    harga_min = float(df["harga"].min())
+    harga_max = float(df["harga"].max())
 
     return {
         "total_data": total_data,
-        "rata_rata_harga": f"Rp {rata_rata_harga:,} ribu",
-        "rentang_harga": f"Rp {harga_min:,}k – Rp {harga_max:,}k",
+        "rata_rata_harga": _format_rp(rata_rata_harga),
+        "rentang_harga": f"{_format_rp(harga_min)} – {_format_rp(harga_max)}",
     }
 
 
@@ -152,13 +169,15 @@ def _panggil_groq(prompt_user):
                     "content": (
                         "Kamu asisten analisis data kos di Madiun. Jawab SANGAT SINGKAT "
                         "(maksimal 1-2 kalimat saja, tanpa poin/daftar, langsung ke inti) "
-                        "dalam bahasa Indonesia."
+                        "dalam bahasa Indonesia. Selalu tulis nominal uang dalam format rupiah "
+                        "penuh dengan pemisah titik seperti Rp 1.073.000, dan JANGAN pernah "
+                        "memakai kata 'ribu', 'rb', 'k', atau 'juta'."
                     ),
                 },
                 {"role": "user", "content": prompt_user},
             ],
             temperature=0.2,
-            max_tokens=120,
+            max_tokens=140,
         )
         return response.choices[0].message.content.strip()
     except Exception as e:
@@ -167,19 +186,20 @@ def _panggil_groq(prompt_user):
 
 def buat_penjelasan_ai(hasil_prediksi=None, info_prediksi=None):
     punya_ac = df["ac"].astype(str).str.strip().str.lower() == "ya"
-    rata_ac = round(float(df.loc[punya_ac, "harga"].mean()))
-    rata_non_ac = round(float(df.loc[~punya_ac, "harga"].mean()))
+    rata_ac = _format_rp(float(df.loc[punya_ac, "harga"].mean()))
+    rata_non_ac = _format_rp(float(df.loc[~punya_ac, "harga"].mean()))
     korelasi_jarak = round(float(df["jarak_km"].corr(df["harga"])), 2)
     min_jarak = round(float(df["jarak_km"].min()), 1)
     max_jarak = round(float(df["jarak_km"].max()), 1)
-    rata_harga = round(float(df["harga"].mean()))
-    min_harga = round(float(df["harga"].min()))
-    max_harga = round(float(df["harga"].max()))
+    rata_harga = _format_rp(float(df["harga"].mean()))
+    min_harga = _format_rp(float(df["harga"].min()))
+    max_harga = _format_rp(float(df["harga"].max()))
 
     konteks_pred = ""
     if hasil_prediksi is not None and info_prediksi:
+        pred_rp = _format_rp(hasil_prediksi)
         konteks_pred = (
-            f" Prediksi saat ini Rp {hasil_prediksi}k untuk jarak {info_prediksi['jarak']} km, "
+            f" Prediksi saat ini {pred_rp} untuk jarak {info_prediksi['jarak']} km, "
             f"rating {info_prediksi['rating']}, {info_prediksi['ac_label']}."
         )
 
@@ -189,12 +209,12 @@ def buat_penjelasan_ai(hasil_prediksi=None, info_prediksi=None):
     )
 
     penjelasan_ac = _panggil_groq(
-        f"Rata-rata harga kos dengan AC Rp {rata_ac}k dan tanpa AC Rp {rata_non_ac}k. "
+        f"Rata-rata harga kos dengan AC {rata_ac} dan tanpa AC {rata_non_ac}. "
         "Jelaskan perbedaan harga berdasarkan fasilitas AC dalam 1-2 kalimat singkat."
     )
 
     penjelasan_tabel = _panggil_groq(
-        f"Tabel kos punya {len(df)} data, harga min Rp {min_harga}k, max Rp {max_harga}k, rata-rata Rp {rata_harga}k. "
+        f"Tabel kos punya {len(df)} data, harga min {min_harga}, max {max_harga}, rata-rata {rata_harga}. "
         "Ringkas isi tabel data kos ini dalam 1-2 kalimat singkat."
     )
 
