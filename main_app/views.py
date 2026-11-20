@@ -21,6 +21,7 @@ model = joblib.load(BASE_DIR / "ml_model" / "model.pkl")
 df = pd.read_csv(BASE_DIR / "data" / "kos_madiun.csv")
 
 
+# ---------- fungsi bantu format ----------
 def _ke_rupiah_penuh(nilai_ribu):
     return int(round(float(nilai_ribu) * 1000))
 
@@ -35,6 +36,10 @@ def _format_tick_rp(val, pos):
     return f"{rupiah:,}".replace(",", ".")
 
 
+def _koma(angka, desimal=2):
+    return str(round(float(angka), desimal)).replace(".", ",")
+
+
 def _fig_to_base64(fig):
     buf = io.BytesIO()
     fig.savefig(buf, format="png", dpi=110, bbox_inches="tight")
@@ -42,6 +47,7 @@ def _fig_to_base64(fig):
     return base64.b64encode(buf.getvalue()).decode()
 
 
+# ---------- grafik ----------
 def buat_grafik_scatter(jarak=None, rating=None, ac_num=None, prediksi=None):
     fig, ax = plt.subplots(figsize=(6.2, 3.6))
     ax.scatter(
@@ -131,6 +137,7 @@ def buat_grafik_ac(ac_num=None):
     return _fig_to_base64(fig)
 
 
+# ---------- statistik dan kategori ----------
 def hitung_statistik_dataset():
     total_data = len(df)
     rata_rata_harga = float(df["harga"].mean())
@@ -155,10 +162,27 @@ def tentukan_kategori_harga(prediksi):
     return "Relatif Tinggi / Premium", "badge-mahal"
 
 
-def _panggil_groq(prompt_user):
+# ---------- penjelasan grafik ----------
+def _kekuatan_korelasi(r):
+    a = abs(r)
+    if a < 0.2:
+        kekuatan = "sangat lemah"
+    elif a < 0.4:
+        kekuatan = "lemah"
+    elif a < 0.6:
+        kekuatan = "sedang"
+    else:
+        kekuatan = "kuat"
+    arah = "negatif" if r < 0 else "positif"
+    return kekuatan, arah
+
+
+def _panggil_groq(prompt_user, cadangan, wajib=()):
+    """Panggil AI. Jika gagal, tidak diawali 'Grafik ini', atau tidak memuat
+    kata/angka yang wajib ada, pakai kalimat cadangan buatan kode."""
     api_key = os.environ.get("GROQ_API_KEY")
     if not api_key:
-        return "Penjelasan AI belum aktif (GROQ_API_KEY belum diatur)."
+        return cadangan
     try:
         client = Groq(api_key=api_key)
         response = client.chat.completions.create(
@@ -167,55 +191,146 @@ def _panggil_groq(prompt_user):
                 {
                     "role": "system",
                     "content": (
-                        "Kamu asisten analisis data kos di Madiun. Jawab SANGAT SINGKAT "
-                        "(maksimal 1-2 kalimat saja, tanpa poin/daftar, langsung ke inti) "
-                        "dalam bahasa Indonesia. Selalu tulis nominal uang dalam format rupiah "
-                        "penuh dengan pemisah titik seperti Rp 1.073.000, dan JANGAN pernah "
-                        "memakai kata 'ribu', 'rb', 'k', atau 'juta'."
+                        "Kamu pembaca grafik data kos. Tulis 1-2 kalimat singkat "
+                        "bahasa Indonesia yang murni menjelaskan isi dan posisi data "
+                        "pada grafik sesuai input yang diberikan. Kalimat pertama WAJIB "
+                        "diawali dengan kata 'Grafik ini'. Jika fakta memuat bagian "
+                        "'kesimpulan', tuliskan kesimpulan itu apa adanya. Jika ada "
+                        "angka korelasi, tulis angkanya beserta tingkat kekuatannya. "
+                        "Jika membandingkan dengan rata-rata sebuah kelompok, sebut nama "
+                        "kelompok dan nominal rata-ratanya secara lengkap, jangan hanya "
+                        "menulis 'kelompoknya'. Jangan pakai kalimat komentar, opini, "
+                        "atau saran. Susun kalimat dengan redaksi alami yang tidak "
+                        "meniru contoh. Tanpa poin/daftar dan tanpa menyebut nama kota "
+                        "atau lokasi. Gunakan HANYA angka yang diberikan. Tulis nominal "
+                        "uang dalam format rupiah penuh dengan titik pemisah seperti "
+                        "Rp 1.067.857, dan JANGAN pakai kata 'ribu', 'rb', 'k', atau "
+                        "'juta'."
                     ),
                 },
                 {"role": "user", "content": prompt_user},
             ],
             temperature=0.2,
-            max_tokens=140,
+            max_tokens=130,
         )
-        return response.choices[0].message.content.strip()
-    except Exception as e:
-        return f"Gagal memuat AI: {e}"
+        teks = response.choices[0].message.content.strip()
+        if not teks.lower().startswith("grafik ini"):
+            return cadangan
+        for kata in wajib:
+            if kata.lower() not in teks.lower():
+                return cadangan
+        return teks
+    except Exception:
+        return cadangan
 
 
 def buat_penjelasan_ai(hasil_prediksi=None, info_prediksi=None):
-    punya_ac = df["ac"].astype(str).str.strip().str.lower() == "ya"
-    rata_ac = _format_rp(float(df.loc[punya_ac, "harga"].mean()))
-    rata_non_ac = _format_rp(float(df.loc[~punya_ac, "harga"].mean()))
-    korelasi_jarak = round(float(df["jarak_km"].corr(df["harga"])), 2)
-    min_jarak = round(float(df["jarak_km"].min()), 1)
-    max_jarak = round(float(df["jarak_km"].max()), 1)
-    rata_harga = _format_rp(float(df["harga"].mean()))
-    min_harga = _format_rp(float(df["harga"].min()))
-    max_harga = _format_rp(float(df["harga"].max()))
+    harga = df["harga"]
+    jumlah = len(df)
+    min_harga = _format_rp(harga.min())
+    max_harga = _format_rp(harga.max())
+    rata_harga_angka = float(harga.mean())
+    rata_harga = _format_rp(rata_harga_angka)
 
-    konteks_pred = ""
+    # --- grafik scatter (jarak vs harga): rating TIDAK disebut ---
+    r = float(df["jarak_km"].corr(harga))
+    kekuatan, arah = _kekuatan_korelasi(r)
+    jarak_min = _koma(df["jarak_km"].min(), 1)
+    jarak_max = _koma(df["jarak_km"].max(), 1)
+
+    fakta_scatter = (
+        f"{jumlah} kos, jarak {jarak_min}-{jarak_max} km, harga {min_harga} sampai "
+        f"{max_harga}. Korelasi jarak dan harga {_koma(r)}, tergolong {kekuatan} "
+        f"(arah {arah})."
+    )
+    cadangan_scatter = (
+        f"Grafik ini menunjukkan {jumlah} kos berjarak {jarak_min}-{jarak_max} km "
+        f"dengan korelasi jarak dan harga {_koma(r)}, tergolong {kekuatan}."
+    )
+
     if hasil_prediksi is not None and info_prediksi:
-        pred_rp = _format_rp(hasil_prediksi)
-        konteks_pred = (
-            f" Prediksi saat ini {pred_rp} untuk jarak {info_prediksi['jarak']} km, "
-            f"rating {info_prediksi['rating']}, {info_prediksi['ac_label']}."
+        selisih_rata = hasil_prediksi - rata_harga_angka
+        posisi = "di atas" if selisih_rata >= 0 else "di bawah"
+        jarak_in = _koma(info_prediksi["jarak"], 1)
+        fakta_scatter += (
+            f" Posisi kos yang dicek pengguna: jarak {jarak_in} km dengan prediksi "
+            f"{_format_rp(hasil_prediksi)}, yaitu {posisi} rata-rata data "
+            f"({rata_harga}) sebesar {_format_rp(abs(selisih_rata))}."
+        )
+        cadangan_scatter = (
+            f"Grafik ini menunjukkan korelasi jarak dan harga {_koma(r)}, tergolong "
+            f"{kekuatan}, dengan kos pada jarak {jarak_in} km diprediksi "
+            f"{_format_rp(hasil_prediksi)}, {posisi} rata-rata data ({rata_harga})."
         )
 
     penjelasan_scatter = _panggil_groq(
-        f"Data jarak {min_jarak}-{max_jarak} km, korelasi jarak dengan harga {korelasi_jarak}.{konteks_pred} "
-        "Jelaskan hubungan jarak dan harga kos (serta prediksinya jika ada) dalam 1-2 kalimat singkat."
+        "Grafik scatter jarak vs harga. Fakta: " + fakta_scatter +
+        " Jelaskan isi grafik (sertakan angka korelasi beserta tingkat kekuatannya), "
+        "dan jika ada kos yang dicek, sebutkan posisinya terhadap rata-rata. "
+        "Jangan menyebut rating.",
+        cadangan_scatter,
+        wajib=(kekuatan,),
     )
+
+    # --- grafik batang AC: kelompok disebut lengkap + kesimpulan ---
+    punya_ac = df["ac"].astype(str).str.strip().str.lower() == "ya"
+    rata_ac_angka = float(harga[punya_ac].mean())
+    rata_non_angka = float(harga[~punya_ac].mean())
+    selisih = rata_ac_angka - rata_non_angka
+    persen = abs(selisih) / rata_non_angka * 100
+    lebih = "lebih mahal" if selisih >= 0 else "lebih murah"
+    kesimpulan_ac = (
+        "selisihnya kecil sehingga AC hampir tidak memengaruhi harga"
+        if persen < 5
+        else "selisihnya cukup besar sehingga AC memengaruhi harga"
+    )
+
+    fakta_ac = (
+        f"rata-rata kos dengan AC {_format_rp(rata_ac_angka)}, rata-rata kos tanpa AC "
+        f"{_format_rp(rata_non_angka)}, kos ber-AC {lebih} {_format_rp(abs(selisih))} "
+        f"({_koma(persen, 1)}%). Kesimpulan: {kesimpulan_ac}."
+    )
+    cadangan_ac = (
+        f"Grafik ini menunjukkan kos ber-AC {lebih} {_format_rp(abs(selisih))} "
+        f"({_koma(persen, 1)}%) dari kos tanpa AC, {kesimpulan_ac}."
+    )
+    wajib_ac = ()
+
+    if hasil_prediksi is not None and info_prediksi:
+        dengan_ac = info_prediksi["ac_label"] == "Dengan AC"
+        nama_kelompok = "kos dengan AC" if dengan_ac else "kos tanpa AC"
+        rata_kelompok = rata_ac_angka if dengan_ac else rata_non_angka
+        posisi_ac = "di atas" if hasil_prediksi >= rata_kelompok else "di bawah"
+        fakta_ac += (
+            f" Posisi kos yang dicek pengguna: prediksi {_format_rp(hasil_prediksi)}, "
+            f"{posisi_ac} rata-rata {nama_kelompok} yang sebesar "
+            f"{_format_rp(rata_kelompok)}."
+        )
+        cadangan_ac = (
+            f"Grafik ini menunjukkan {kesimpulan_ac}, dengan prediksi "
+            f"{_format_rp(hasil_prediksi)} berada {posisi_ac} rata-rata "
+            f"{nama_kelompok} sebesar {_format_rp(rata_kelompok)}."
+        )
+        wajib_ac = (_format_rp(rata_kelompok),)
 
     penjelasan_ac = _panggil_groq(
-        f"Rata-rata harga kos dengan AC {rata_ac} dan tanpa AC {rata_non_ac}. "
-        "Jelaskan perbedaan harga berdasarkan fasilitas AC dalam 1-2 kalimat singkat."
+        "Grafik batang rata-rata harga berdasarkan AC. Fakta: " + fakta_ac +
+        " Jelaskan isi grafik, tuliskan kesimpulannya, dan jika ada kos yang dicek, "
+        "sebutkan posisinya terhadap rata-rata kelompok lengkap dengan nama "
+        "kelompok dan nominalnya.",
+        cadangan_ac,
+        wajib=wajib_ac,
     )
 
+    # --- ringkasan data ---
+    cadangan_tabel = (
+        f"Grafik ini menunjukkan {jumlah} kos dengan harga {min_harga} sampai "
+        f"{max_harga}, rata-rata {rata_harga}."
+    )
     penjelasan_tabel = _panggil_groq(
-        f"Tabel kos punya {len(df)} data, harga min {min_harga}, max {max_harga}, rata-rata {rata_harga}. "
-        "Ringkas isi tabel data kos ini dalam 1-2 kalimat singkat."
+        f"Ringkasan data kos. Fakta: {jumlah} kos, harga terendah {min_harga}, "
+        f"tertinggi {max_harga}, rata-rata {rata_harga}. Rangkum gambaran umum harganya.",
+        cadangan_tabel,
     )
 
     return {
@@ -225,6 +340,7 @@ def buat_penjelasan_ai(hasil_prediksi=None, info_prediksi=None):
     }
 
 
+# ---------- halaman utama ----------
 def index(request):
     hasil = None
     info_prediksi = None

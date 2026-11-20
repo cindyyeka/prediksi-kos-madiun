@@ -83,7 +83,7 @@
             display: grid;
             grid-template-columns: 1fr 1.35fr;
             gap: 20px;
-            align-items: start;
+            align-items: stretch;
         }
 
         .stack-col {
@@ -106,7 +106,7 @@
             color: var(--text-main);
         }
 
-        /* Tombol Preset Cepat */
+        /* Tombol Preset Cepat: 3 tombol sejajar satu baris */
         .preset-box {
             margin-bottom: 14px;
         }
@@ -121,16 +121,19 @@
 
         .preset-list {
             display: flex;
-            flex-wrap: wrap;
+            flex-wrap: nowrap;
             gap: 7px;
         }
 
         .preset-btn {
+            flex: 1 1 0;
             width: auto;
             margin-top: 0;
-            padding: 5px 10px;
+            padding: 6px 6px;
             font-size: 12px;
             font-weight: 600;
+            text-align: center;
+            white-space: nowrap;
             background-color: var(--accent-soft);
             color: var(--accent);
             border: 1px solid #c3dcd5;
@@ -347,6 +350,12 @@
                 grid-template-columns: 1fr;
             }
         }
+
+        @media (max-width: 480px) {
+            .preset-list {
+                flex-wrap: wrap;
+            }
+        }
     </style>
 </head>
 <body>
@@ -384,7 +393,7 @@
                         <div class="preset-list">
                             <button type="button" class="preset-btn" onclick="applyPreset(1.5, 4, 'ya')">Dekat Kampus + AC</button>
                             <button type="button" class="preset-btn" onclick="applyPreset(2, 3.1, 'tidak')">Hemat Tanpa AC</button>
-                            <button type="button" class="preset-btn" onclick="applyPreset(5, 4.5, 'ya')">Jauh (5 km) + Rating Tinggi</button>
+                            <button type="button" class="preset-btn" onclick="applyPreset(4.5, 4, 'ya')">Jauh + AC</button>
                         </div>
                     </div>
 
@@ -434,7 +443,6 @@
                         <p class="hasil-detail">
                             Input: jarak <b>{{ info_prediksi.jarak }} km</b>, rating <b>{{ info_prediksi.rating }}</b>, dan fasilitas <b>{{ info_prediksi.ac_label }}</b>.
                         </p>
-                        <p class="range-note">rentang 0,5-5 km</p>
                         <div class="budget-box" id="budget-helper" data-hasil="{{ hasil }}" data-rata="{{ statistik.rata_rata_harga }}">
                             <p><strong>Rata-rata data kos:</strong> <span>{{ statistik.rata_rata_harga }}</span></p>
                             <p id="selisih-rata-rata"></p>
@@ -448,28 +456,28 @@
             <div class="stack-col">
                 <div class="card">
                     <img class="chart-img" src="data:image/png;base64,{{ grafik_scatter }}" alt="Grafik scatter harga kos vs jarak">
-                    <div class="ai-note">
-                        <span class="ai-label">Penjelasan AI</span>
-                        <p class="ai-text ai-rupiah-clean">
-                            {{ penjelasan_ai.scatter|default:"Titik sebaran pada grafik memperlihatkan jarak kos berada di rentang 0,5–5,0 km dan harga bulanan berkisar Rp 500.000–Rp 1.500.000 dengan korelasi negatif lemah (-0,12)." }}
-                        </p>
-                    </div>
+                    {% if penjelasan_ai.scatter %}
+                        <div class="ai-note">
+                            <span class="ai-label">Penjelasan AI</span>
+                            <p class="ai-text ai-rupiah-clean">{{ penjelasan_ai.scatter }}</p>
+                        </div>
+                    {% endif %}
                 </div>
 
                 <div class="card">
                     <img class="chart-img" src="data:image/png;base64,{{ grafik_ac }}" alt="Grafik rata-rata harga kos berdasarkan AC">
-                    <div class="ai-note">
-                        <span class="ai-label">Penjelasan AI</span>
-                        <p class="ai-text ai-rupiah-clean">
-                            {{ penjelasan_ai.ac|default:"Batang pada grafik membandingkan rata-rata harga kos tanpa AC (Rp 1.046.875) dan dengan AC (Rp 1.067.857), dengan perbedaan rata-rata sebesar Rp 20.982." }}
-                        </p>
-                    </div>
+                    {% if penjelasan_ai.ac %}
+                        <div class="ai-note">
+                            <span class="ai-label">Penjelasan AI</span>
+                            <p class="ai-text ai-rupiah-clean">{{ penjelasan_ai.ac }}</p>
+                        </div>
+                    {% endif %}
                 </div>
             </div>
         </div>
 
         <footer class="site-footer">
-            CekKos Madiun
+            CekKos Madiun 
         </footer>
     </div>
 
